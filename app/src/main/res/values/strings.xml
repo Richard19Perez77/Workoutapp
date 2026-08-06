@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Workoutapp</string>
+    <string name="machine_step">Step Machine</string>
+    <string name="steps_label">steps</string>
+    <string name="start_workout">Start workout</string>
+    <string name="stop_workout">Stop</string>
 </resources>
