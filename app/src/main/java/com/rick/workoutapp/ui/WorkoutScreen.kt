@@ -52,6 +52,12 @@ fun WorkoutScreen(
     var steps by remember { mutableIntStateOf(0) }
     var elapsedSeconds by remember { mutableLongStateOf(0L) }
 
+    val disconnect = stringResource(id = R.string.disconnect)
+    val machineStep = stringResource(id = R.string.machine_step)
+    val stepsLabel = stringResource(id = R.string.steps_label)
+    val startWorkout = stringResource(id = R.string.start_workout)
+    val stopWorkout = stringResource(id = R.string.stop_workout)
+
     if (isRunning) {
         LaunchedEffect(Unit) {
             while (isActive) {
@@ -94,7 +100,7 @@ fun WorkoutScreen(
                     onDisconnect()
                 }
             ) {
-                Text(text = stringResource(R.string.disconnect))
+                Text(text = disconnect)
             }
         }
 
@@ -105,7 +111,7 @@ fun WorkoutScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = stringResource(R.string.machine_step),
+                text = machineStep,
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -119,7 +125,7 @@ fun WorkoutScreen(
                 textAlign = TextAlign.Center
             )
             Text(
-                text = stringResource(R.string.steps_label),
+                text = stepsLabel,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -148,7 +154,7 @@ fun WorkoutScreen(
                         .fillMaxWidth()
                         .height(56.dp)
                 ) {
-                    Text(text = stringResource(R.string.start_workout))
+                    Text(text = startWorkout)
                 }
             } else {
                 OutlinedButton(
@@ -157,7 +163,7 @@ fun WorkoutScreen(
                         .fillMaxWidth()
                         .height(56.dp)
                 ) {
-                    Text(text = stringResource(R.string.stop_workout))
+                    Text(text = stopWorkout)
                 }
             }
         }

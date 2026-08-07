@@ -46,6 +46,7 @@ import com.rick.workoutapp.model.demoStepMachines
 import com.rick.workoutapp.ui.theme.WorkoutappTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 private val ConnectedGreen = Color(0xFF2E7D32)
@@ -56,7 +57,6 @@ fun DevicesScreen(
     onDeviceConnected: (WorkoutDevice) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val scannedDevices by connector.devices.collectAsState()
     val connectionState by connector.connectionState.collectAsState()
@@ -67,6 +67,17 @@ fun DevicesScreen(
     var connectedDemoAddress by remember { mutableStateOf<String?>(null) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
 
+    val connectDeviceTitle = stringResource(id = R.string.connect_device_title)
+    val connectDeviceSubtitle = stringResource(id = R.string.connect_device_subtitle)
+    val btScan = stringResource(id = R.string.bt_scan)
+    val btScanning = stringResource(id = R.string.bt_scanning)
+    val btDemoHint = stringResource(id = R.string.bt_demo_hint)
+    val btPermissionDenied = stringResource(id = R.string.bt_permission_denied)
+    val btDisabled = stringResource(id = R.string.bt_disabled)
+    val btUnavailable = stringResource(id = R.string.bt_unavailable)
+    val btConnectFailed = stringResource(id = R.string.bt_connect_failed)
+    val bleDeviceFallbackName = stringResource(id = R.string.ble_device_fallback)
+
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { result ->
@@ -75,7 +86,7 @@ fun DevicesScreen(
             connector.startScan()
             statusMessage = null
         } else if (!hasPermissions) {
-            statusMessage = context.getString(R.string.bt_permission_denied)
+            statusMessage = btPermissionDenied
         }
     }
 
@@ -86,20 +97,20 @@ fun DevicesScreen(
             connector.startScan()
             statusMessage = null
         } else {
-            statusMessage = context.getString(R.string.bt_disabled)
+            statusMessage = btDisabled
         }
     }
 
     fun beginScan() {
         when {
             !connector.isBluetoothAvailable -> {
-                statusMessage = context.getString(R.string.bt_unavailable)
+                statusMessage = btUnavailable
             }
             !hasPermissions -> {
                 permissionLauncher.launch(connector.requiredPermissions())
             }
             !connector.isBluetoothEnabled -> {
-                statusMessage = context.getString(R.string.bt_disabled)
+                statusMessage = btDisabled
                 enableBtLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
             }
             else -> {
@@ -128,14 +139,11 @@ fun DevicesScreen(
         when (val state = connectionState) {
             is BleConnectionState.Connected -> {
                 val device = scannedDevices.find { it.address == state.address }
-                    ?: WorkoutDevice(address = state.address, name = "BLE Device")
+                    ?: WorkoutDevice(address = state.address, name = bleDeviceFallbackName)
                 onDeviceConnected(device)
             }
             is BleConnectionState.Failed -> {
-                statusMessage = context.getString(
-                    R.string.bt_connect_failed,
-                    state.reason
-                )
+                statusMessage = btConnectFailed.format(state.reason)
             }
             else -> Unit
         }
@@ -155,11 +163,11 @@ fun DevicesScreen(
             .padding(horizontal = 24.dp, vertical = 32.dp)
     ) {
         Text(
-            text = stringResource(R.string.connect_device_title),
+            text = connectDeviceTitle,
             style = MaterialTheme.typography.headlineSmall
         )
         Text(
-            text = stringResource(R.string.connect_device_subtitle),
+            text = connectDeviceSubtitle,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 8.dp)
@@ -173,13 +181,7 @@ fun DevicesScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             OutlinedButton(onClick = { beginScan() }) {
-                Text(
-                    text = if (isScanning) {
-                        stringResource(R.string.bt_scanning)
-                    } else {
-                        stringResource(R.string.bt_scan)
-                    }
-                )
+                Text(text = if (isScanning) btScanning else btScan)
             }
             if (isScanning) {
                 CircularProgressIndicator(
@@ -199,7 +201,7 @@ fun DevicesScreen(
         }
 
         Text(
-            text = stringResource(R.string.bt_demo_hint),
+            text = btDemoHint,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 12.dp)
@@ -239,7 +241,7 @@ fun DevicesScreen(
                                 delay(1.seconds)
                                 connectingDemoAddress = null
                                 connectedDemoAddress = device.address
-                                delay(400)
+                                delay(400.milliseconds)
                                 onDeviceConnected(device)
                             }
                         } else {

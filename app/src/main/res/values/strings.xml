@@ -18,4 +18,5 @@
     <string name="bt_permission_denied">Bluetooth permission denied. Demo devices are still available.</string>
     <string name="bt_demo_hint">Demo step machines are listed below for emulator/UI testing.</string>
     <string name="bt_connect_failed">Connection failed: %1$s</string>
+    <string name="ble_device_fallback">fallback</string>
 </resources>
