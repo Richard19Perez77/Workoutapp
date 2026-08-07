@@ -130,11 +130,12 @@ class BleWorkoutConnector(context: Context) {
             return
         }
 
-        gatt = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            remote.connectGatt(appContext, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
-        } else {
-            remote.connectGatt(appContext, false, gattCallback)
-        }
+        gatt = remote.connectGatt(
+            appContext,
+            false,
+            gattCallback,
+            BluetoothDevice.TRANSPORT_LE
+        )
     }
 
     @SuppressLint("MissingPermission")
