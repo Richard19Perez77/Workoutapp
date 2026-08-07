@@ -34,7 +34,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rick.workoutapp.R
-import com.rick.workoutapp.model.FakeStepMachine
+import com.rick.workoutapp.model.WorkoutDevice
 import com.rick.workoutapp.ui.theme.WorkoutappTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -44,7 +44,7 @@ private val ConnectedGreen = Color(0xFF2E7D32)
 
 @Composable
 fun WorkoutScreen(
-    device: FakeStepMachine,
+    device: WorkoutDevice,
     onDisconnect: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -175,7 +175,7 @@ private fun formatElapsed(totalSeconds: Long): String {
 private fun WorkoutScreenPreview() {
     WorkoutappTheme {
         WorkoutScreen(
-            device = FakeStepMachine(id = "step-1", name = "Step Machine A"),
+            device = WorkoutDevice(address = "demo-1", name = "Step Machine A", isSimulated = true),
             onDisconnect = {}
         )
     }

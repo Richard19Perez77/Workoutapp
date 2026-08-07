@@ -5,9 +5,17 @@
     <string name="start_workout">Start workout</string>
     <string name="stop_workout">Stop</string>
     <string name="connect_device_title">Connect a device</string>
-    <string name="connect_device_subtitle">Choose a step machine to simulate a Bluetooth connection.</string>
+    <string name="connect_device_subtitle">Scan for nearby BLE devices, or use a demo step machine on emulator.</string>
     <string name="status_available">Available</string>
     <string name="status_connecting">Connecting…</string>
     <string name="status_connected">Connected</string>
+    <string name="status_demo">Demo device</string>
     <string name="disconnect">Disconnect</string>
+    <string name="bt_scan">Scan</string>
+    <string name="bt_scanning">Scanning…</string>
+    <string name="bt_unavailable">Bluetooth LE is not available on this device/emulator.</string>
+    <string name="bt_disabled">Bluetooth is off. Enable it to scan for real devices.</string>
+    <string name="bt_permission_denied">Bluetooth permission denied. Demo devices are still available.</string>
+    <string name="bt_demo_hint">Demo step machines are listed below for emulator/UI testing.</string>
+    <string name="bt_connect_failed">Connection failed: %1$s</string>
 </resources>
