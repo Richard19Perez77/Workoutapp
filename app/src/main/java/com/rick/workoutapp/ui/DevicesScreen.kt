@@ -102,6 +102,8 @@ fun DevicesScreen(
     }
 
     fun beginScan() {
+        // Empty the list immediately on every Scan tap, then restart discovery.
+        connector.clearDevices()
         when {
             !connector.isBluetoothAvailable -> {
                 statusMessage = btUnavailable
@@ -155,7 +157,13 @@ fun DevicesScreen(
         connector.failIfStillConnecting("Timed out waiting for ${connecting.address}")
     }
 
-    val listDevices = scannedDevices + demoStepMachines
+    // While scanning, show only live BLE results (starts empty after clear).
+    // After scan stops, include demo machines again for emulator/UI testing.
+    val listDevices = if (isScanning) {
+        scannedDevices
+    } else {
+        scannedDevices + demoStepMachines
+    }
 
     Column(
         modifier = modifier

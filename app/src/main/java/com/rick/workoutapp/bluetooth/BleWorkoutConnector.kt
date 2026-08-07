@@ -105,20 +105,38 @@ class BleWorkoutConnector(context: Context) {
     }
 
     /**
+     * Drop all scanned devices from the list without starting a scan.
+     * Used so the UI can empty the list the moment Scan is tapped.
+     */
+    fun clearDevices() {
+        _devices.value = emptyList()
+    }
+
+    /**
      * Begin a BLE advertisement scan.
      * [scanCallback] is invoked asynchronously as packets arrive.
      * Pass null filters = accept all advertisers (fine for learning / demo).
+     *
+     * Always clears [devices] first so each Scan click starts from an empty list.
+     * If a scan is already running, it is stopped and restarted.
      */
     @SuppressLint("MissingPermission")
     fun startScan() {
+        // Drop previous results immediately so the UI shows an empty list.
+        _devices.value = emptyList()
+
         if (!hasRequiredPermissions() || adapter == null || !adapter.isEnabled) {
             _isScanning.value = false
             return
         }
-        if (scanning) return
 
-        // Fresh scan session so stale rows from a previous pass disappear.
-        _devices.value = emptyList()
+        // Restarting: stop the current session before starting a new one.
+        if (scanning) {
+            adapter.bluetoothLeScanner?.stopScan(scanCallback)
+            scanning = false
+            _isScanning.value = false
+        }
+
         val scanner = adapter.bluetoothLeScanner ?: return
         val settings = ScanSettings.Builder()
             // LOW_LATENCY finds devices faster; uses more power — OK for short UI scans.
