@@ -43,6 +43,10 @@ fun WorkoutApp() {
                 )
             }
 
+            // todo if bluetooth is not supported gracefully disable bluetooth features
+            // todo missing permissions
+            // todo disabled bluetooth
+            // todo how about no devices found
             if (connectedDevice != null) {
                 WorkoutScreen(
                     device = connectedDevice,
