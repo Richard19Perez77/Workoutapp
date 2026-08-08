@@ -6,8 +6,12 @@ data class WorkoutDevice(
     val isSimulated: Boolean = false,
 )
 
-val demoStepMachines = listOf(
-    WorkoutDevice(address = "demo-1", name = "Step Machine A", isSimulated = true),
-    WorkoutDevice(address = "demo-2", name = "Step Machine B", isSimulated = true),
-    WorkoutDevice(address = "demo-3", name = "Step Machine C", isSimulated = true),
+/**
+ * The single in-app mock peripheral used when hardware BLE is unavailable
+ * or when practicing the client/server data path.
+ */
+val mockStepMachine = WorkoutDevice(
+    address = "MOCK:STEP:01",
+    name = "GymStep Pro (Mock)",
+    isSimulated = true,
 )

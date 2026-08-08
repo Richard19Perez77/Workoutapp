@@ -29,7 +29,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,12 +40,11 @@ import androidx.compose.ui.unit.dp
 import com.rick.workoutapp.R
 import com.rick.workoutapp.bluetooth.BleConnectionState
 import com.rick.workoutapp.bluetooth.BleWorkoutConnector
+import com.rick.workoutapp.bluetooth.mock.MockWorkoutClient
 import com.rick.workoutapp.model.WorkoutDevice
-import com.rick.workoutapp.model.demoStepMachines
+import com.rick.workoutapp.model.mockStepMachine
 import com.rick.workoutapp.ui.theme.WorkoutappTheme
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 private val ConnectedGreen = Color(0xFF2E7D32)
@@ -54,24 +52,23 @@ private val ConnectedGreen = Color(0xFF2E7D32)
 @Composable
 fun DevicesScreen(
     connector: BleWorkoutConnector,
+    mockClient: MockWorkoutClient,
     onDeviceConnected: (WorkoutDevice) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val scope = rememberCoroutineScope()
     val scannedDevices by connector.devices.collectAsState()
-    val connectionState by connector.connectionState.collectAsState()
+    val bleConnectionState by connector.connectionState.collectAsState()
+    val mockConnectionState by mockClient.connectionState.collectAsState()
     val isScanning by connector.isScanning.collectAsState()
 
     var hasPermissions by remember { mutableStateOf(connector.hasRequiredPermissions()) }
-    var connectingDemoAddress by remember { mutableStateOf<String?>(null) }
-    var connectedDemoAddress by remember { mutableStateOf<String?>(null) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
 
     val connectDeviceTitle = stringResource(id = R.string.connect_device_title)
     val connectDeviceSubtitle = stringResource(id = R.string.connect_device_subtitle)
     val btScan = stringResource(id = R.string.bt_scan)
     val btScanning = stringResource(id = R.string.bt_scanning)
-    val btDemoHint = stringResource(id = R.string.bt_demo_hint)
+    val mockHint = stringResource(id = R.string.bt_mock_hint)
     val btPermissionDenied = stringResource(id = R.string.bt_permission_denied)
     val btDisabled = stringResource(id = R.string.bt_disabled)
     val btUnavailable = stringResource(id = R.string.bt_unavailable)
@@ -102,7 +99,6 @@ fun DevicesScreen(
     }
 
     fun beginScan() {
-        // Empty the list immediately on every Scan tap, then restart discovery.
         connector.clearDevices()
         when {
             !connector.isBluetoothAvailable -> {
@@ -126,7 +122,6 @@ fun DevicesScreen(
         beginScan()
     }
 
-    // Keep scans finite so the UI settles on emulator/hardware.
     LaunchedEffect(isScanning) {
         if (!isScanning) return@LaunchedEffect
         delay(8.seconds)
@@ -137,8 +132,8 @@ fun DevicesScreen(
         onDispose { connector.stopScan() }
     }
 
-    LaunchedEffect(connectionState) {
-        when (val state = connectionState) {
+    LaunchedEffect(bleConnectionState) {
+        when (val state = bleConnectionState) {
             is BleConnectionState.Connected -> {
                 val device = scannedDevices.find { it.address == state.address }
                     ?: WorkoutDevice(address = state.address, name = bleDeviceFallbackName)
@@ -151,19 +146,23 @@ fun DevicesScreen(
         }
     }
 
-    LaunchedEffect(connectionState) {
-        val connecting = connectionState as? BleConnectionState.Connecting ?: return@LaunchedEffect
+    LaunchedEffect(mockConnectionState) {
+        when (val state = mockConnectionState) {
+            is BleConnectionState.Connected -> onDeviceConnected(mockStepMachine)
+            is BleConnectionState.Failed -> {
+                statusMessage = btConnectFailed.format(state.reason)
+            }
+            else -> Unit
+        }
+    }
+
+    LaunchedEffect(bleConnectionState) {
+        val connecting = bleConnectionState as? BleConnectionState.Connecting ?: return@LaunchedEffect
         delay(10.seconds)
         connector.failIfStillConnecting("Timed out waiting for ${connecting.address}")
     }
 
-    // While scanning, show only live BLE results (starts empty after clear).
-    // After scan stops, include demo machines again for emulator/UI testing.
-    val listDevices = if (isScanning) {
-        scannedDevices
-    } else {
-        scannedDevices + demoStepMachines
-    }
+    val listDevices = listOf(mockStepMachine) + scannedDevices
 
     Column(
         modifier = modifier
@@ -209,7 +208,7 @@ fun DevicesScreen(
         }
 
         Text(
-            text = btDemoHint,
+            text = mockHint,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 12.dp)
@@ -222,17 +221,18 @@ fun DevicesScreen(
         ) {
             items(listDevices, key = { it.address }) { device ->
                 val isConnecting = if (device.isSimulated) {
-                    connectingDemoAddress == device.address
+                    mockConnectionState is BleConnectionState.Connecting
                 } else {
-                    (connectionState as? BleConnectionState.Connecting)?.address == device.address
+                    (bleConnectionState as? BleConnectionState.Connecting)?.address == device.address
                 }
                 val isConnected = if (device.isSimulated) {
-                    connectedDemoAddress == device.address
+                    mockConnectionState is BleConnectionState.Connected
                 } else {
-                    (connectionState as? BleConnectionState.Connected)?.address == device.address
+                    (bleConnectionState as? BleConnectionState.Connected)?.address == device.address
                 }
-                val isBusy = connectingDemoAddress != null ||
-                    connectionState is BleConnectionState.Connecting
+                val isBusy =
+                    mockConnectionState is BleConnectionState.Connecting ||
+                        bleConnectionState is BleConnectionState.Connecting
 
                 DeviceRow(
                     device = device,
@@ -244,14 +244,7 @@ fun DevicesScreen(
                         connector.clearFailure()
                         statusMessage = null
                         if (device.isSimulated) {
-                            connectingDemoAddress = device.address
-                            scope.launch {
-                                delay(1.seconds)
-                                connectingDemoAddress = null
-                                connectedDemoAddress = device.address
-                                delay(400.milliseconds)
-                                onDeviceConnected(device)
-                            }
+                            mockClient.connect(device)
                         } else {
                             connector.connect(device)
                         }
@@ -271,6 +264,10 @@ private fun DeviceRow(
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
+    val statusConnecting = stringResource(id = R.string.status_connecting)
+    val statusConnected = stringResource(id = R.string.status_connected)
+    val statusMock = stringResource(id = R.string.status_mock_peripheral)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -286,9 +283,9 @@ private fun DeviceRow(
             )
             Text(
                 text = when {
-                    isConnecting -> stringResource(R.string.status_connecting)
-                    isConnected -> stringResource(R.string.status_connected)
-                    device.isSimulated -> stringResource(R.string.status_demo)
+                    isConnecting -> statusConnecting
+                    isConnected -> statusConnected
+                    device.isSimulated -> statusMock
                     else -> device.address
                 },
                 style = MaterialTheme.typography.bodySmall,
@@ -324,6 +321,7 @@ private fun DevicesScreenPreview() {
         val context = LocalContext.current
         DevicesScreen(
             connector = BleWorkoutConnector(context),
+            mockClient = MockWorkoutClient(),
             onDeviceConnected = {}
         )
     }

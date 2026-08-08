@@ -13,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.rick.workoutapp.bluetooth.BleWorkoutConnector
+import com.rick.workoutapp.bluetooth.mock.MockWorkoutClient
 import com.rick.workoutapp.model.WorkoutDevice
 import com.rick.workoutapp.ui.theme.WorkoutappTheme
 
@@ -20,9 +21,13 @@ import com.rick.workoutapp.ui.theme.WorkoutappTheme
 fun WorkoutApp() {
     val context = LocalContext.current
     val connector = remember { BleWorkoutConnector(context.applicationContext) }
+    val mockClient = remember { MockWorkoutClient() }
 
-    DisposableEffect(connector) {
-        onDispose { connector.release() }
+    DisposableEffect(connector, mockClient) {
+        onDispose {
+            connector.release()
+            mockClient.release()
+        }
     }
 
     WorkoutappTheme {
@@ -43,15 +48,23 @@ fun WorkoutApp() {
                 )
             }
 
-            // todo if bluetooth is not supported gracefully disable bluetooth features
-            // todo missing permissions
-            // todo disabled bluetooth
-            // todo how about no devices found
             if (connectedDevice != null) {
                 WorkoutScreen(
                     device = connectedDevice,
+                    useRemoteSamples = connectedDevice.isSimulated,
+                    stepSamples = mockClient.samples,
+                    onStartWorkout = {
+                        if (connectedDevice.isSimulated) mockClient.startWorkout()
+                    },
+                    onStopWorkout = {
+                        if (connectedDevice.isSimulated) mockClient.stopWorkout()
+                    },
                     onDisconnect = {
-                        connector.disconnect()
+                        if (connectedDevice.isSimulated) {
+                            mockClient.disconnect()
+                        } else {
+                            connector.disconnect()
+                        }
                         connectedAddress = null
                         connectedName = null
                         connectedIsSimulated = false
@@ -60,6 +73,7 @@ fun WorkoutApp() {
             } else {
                 DevicesScreen(
                     connector = connector,
+                    mockClient = mockClient,
                     onDeviceConnected = { device ->
                         connectedAddress = device.address
                         connectedName = device.name

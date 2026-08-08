@@ -34,9 +34,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rick.workoutapp.R
+import com.rick.workoutapp.model.StepSample
 import com.rick.workoutapp.model.WorkoutDevice
+import com.rick.workoutapp.model.mockStepMachine
 import com.rick.workoutapp.ui.theme.WorkoutappTheme
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.isActive
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -47,6 +51,11 @@ fun WorkoutScreen(
     device: WorkoutDevice,
     onDisconnect: () -> Unit,
     modifier: Modifier = Modifier,
+    /** When non-null, steps come from parsed GATT-style notifications (mock or real). */
+    stepSamples: Flow<StepSample> = emptyFlow(),
+    useRemoteSamples: Boolean = false,
+    onStartWorkout: () -> Unit = {},
+    onStopWorkout: () -> Unit = {},
 ) {
     var isRunning by remember { mutableStateOf(false) }
     var steps by remember { mutableIntStateOf(0) }
@@ -58,7 +67,16 @@ fun WorkoutScreen(
     val startWorkout = stringResource(id = R.string.start_workout)
     val stopWorkout = stringResource(id = R.string.stop_workout)
 
-    if (isRunning) {
+    LaunchedEffect(useRemoteSamples, stepSamples) {
+        if (!useRemoteSamples) return@LaunchedEffect
+        stepSamples.collect { sample ->
+            steps = sample.cumulativeSteps
+            elapsedSeconds = sample.elapsedSeconds.toLong()
+        }
+    }
+
+    // Fallback for real BLE until characteristic notify is implemented.
+    if (isRunning && !useRemoteSamples) {
         LaunchedEffect(Unit) {
             while (isActive) {
                 delay(1_000.milliseconds)
@@ -96,7 +114,10 @@ fun WorkoutScreen(
             }
             TextButton(
                 onClick = {
-                    isRunning = false
+                    if (isRunning) {
+                        isRunning = false
+                        onStopWorkout()
+                    }
                     onDisconnect()
                 }
             ) {
@@ -149,6 +170,7 @@ fun WorkoutScreen(
                         steps = 0
                         elapsedSeconds = 0L
                         isRunning = true
+                        onStartWorkout()
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -158,7 +180,10 @@ fun WorkoutScreen(
                 }
             } else {
                 OutlinedButton(
-                    onClick = { isRunning = false },
+                    onClick = {
+                        isRunning = false
+                        onStopWorkout()
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
@@ -181,8 +206,9 @@ private fun formatElapsed(totalSeconds: Long): String {
 private fun WorkoutScreenPreview() {
     WorkoutappTheme {
         WorkoutScreen(
-            device = WorkoutDevice(address = "demo-1", name = "Step Machine A", isSimulated = true),
-            onDisconnect = {}
+            device = mockStepMachine,
+            onDisconnect = {},
+            useRemoteSamples = true,
         )
     }
 }
