@@ -307,7 +307,7 @@ class BleWorkoutConnector(context: Context) {
 
     /**
      * GATT callbacks run on a binder thread — keep work light and only publish
-     * state. [status] is the GATT operation result; [newState] is connected/disconnected.
+     * state. @status is the GATT operation result; @newState is connected/disconnected.
      */
     private val gattCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
