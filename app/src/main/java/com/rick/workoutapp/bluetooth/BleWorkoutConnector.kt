@@ -345,7 +345,7 @@ class BleWorkoutConnector(context: Context) {
 
     /**
      * disconnect() asks the remote to drop the link; close() releases local
-     * native resources. Always close when done or you can leak GATT clients.
+     * native resources. Always close when done, or you can leak GATT clients.
      */
     @SuppressLint("MissingPermission")
     private fun closeGatt() {
