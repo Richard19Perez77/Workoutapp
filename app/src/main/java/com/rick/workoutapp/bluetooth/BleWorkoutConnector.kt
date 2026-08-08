@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
+import android.bluetooth.BluetoothGattConnectionSettings
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.ScanCallback
@@ -200,16 +201,37 @@ class BleWorkoutConnector(context: Context) {
             return
         }
 
-        // autoConnect = false → attempt now and report failure relatively quickly.
-        // TRANSPORT_LE forces the Low Energy transport (what fitness peripherals use).
-        // Note: this overload is deprecated on API 37+ in favor of
-        // BluetoothGattConnectionSettings + Executor; still the common path today.
-        gatt = remote.connectGatt(
-            appContext,
-            false,
-            gattCallback,
-            BluetoothDevice.TRANSPORT_LE
-        )
+        // API 37+ (CINNAMON_BUN) prefers BluetoothGattConnectionSettings + Executor;
+        // older APIs keep the Context-based overload (deprecated on 37).
+        gatt = openGatt(remote)
+    }
+
+    /**
+     * Opens a GATT client for [remote].
+     * Uses the API 37+ ([Build.VERSION_CODES.CINNAMON_BUN]) settings/executor overload
+     * when available. Note: [Build.VERSION_CODES.BAKLAVA] is API 36 — too low for this API.
+     */
+    @SuppressLint("MissingPermission")
+    private fun openGatt(remote: BluetoothDevice): BluetoothGatt? {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN) {
+            val settings = BluetoothGattConnectionSettings.Builder()
+                .setTransport(BluetoothDevice.TRANSPORT_LE)
+                .setAutoConnectEnabled(false)
+                .build()
+            remote.connectGatt(
+                settings,
+                ContextCompat.getMainExecutor(appContext),
+                gattCallback
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            remote.connectGatt(
+                appContext,
+                false,
+                gattCallback,
+                BluetoothDevice.TRANSPORT_LE
+            )
+        }
     }
 
     /** Drop the link from our side and reset state (e.g. user taps Disconnect). */
