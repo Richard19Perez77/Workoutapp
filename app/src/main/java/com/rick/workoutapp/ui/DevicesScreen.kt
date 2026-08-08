@@ -63,6 +63,8 @@ fun DevicesScreen(
 
     var hasPermissions by remember { mutableStateOf(connector.hasRequiredPermissions()) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
+    // Hide mock + clear BLE rows as soon as Scan is tapped (before isScanning flips).
+    var clearingForScan by remember { mutableStateOf(false) }
 
     val connectDeviceTitle = stringResource(id = R.string.connect_device_title)
     val connectDeviceSubtitle = stringResource(id = R.string.connect_device_subtitle)
@@ -80,9 +82,11 @@ fun DevicesScreen(
     ) { result ->
         hasPermissions = result.values.all { it }
         if (hasPermissions && connector.isBluetoothEnabled) {
+            clearingForScan = true
             connector.startScan()
             statusMessage = null
         } else if (!hasPermissions) {
+            clearingForScan = false
             statusMessage = btPermissionDenied
         }
     }
@@ -91,24 +95,30 @@ fun DevicesScreen(
         ActivityResultContracts.StartActivityForResult()
     ) {
         if (connector.isBluetoothEnabled && hasPermissions) {
+            clearingForScan = true
             connector.startScan()
             statusMessage = null
         } else {
+            clearingForScan = false
             statusMessage = btDisabled
         }
     }
 
     fun beginScan() {
+        clearingForScan = true
         connector.clearDevices()
         when {
             !connector.isBluetoothAvailable -> {
                 statusMessage = btUnavailable
+                clearingForScan = false
             }
             !hasPermissions -> {
                 permissionLauncher.launch(connector.requiredPermissions())
+                clearingForScan = false
             }
             !connector.isBluetoothEnabled -> {
                 statusMessage = btDisabled
+                clearingForScan = false
                 enableBtLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
             }
             else -> {
@@ -123,9 +133,13 @@ fun DevicesScreen(
     }
 
     LaunchedEffect(isScanning) {
-        if (!isScanning) return@LaunchedEffect
-        delay(8.seconds)
-        connector.stopScan()
+        if (isScanning) {
+            clearingForScan = true
+            delay(8.seconds)
+            connector.stopScan()
+        } else {
+            clearingForScan = false
+        }
     }
 
     DisposableEffect(connector) {
@@ -162,7 +176,13 @@ fun DevicesScreen(
         connector.failIfStillConnecting("Timed out waiting for ${connecting.address}")
     }
 
-    val listDevices = listOf(mockStepMachine) + scannedDevices
+    // Scan tap: empty list, then only live BLE hits while scanning.
+    // When idle: mock machine + whatever was found.
+    val listDevices = if (isScanning || clearingForScan) {
+        scannedDevices
+    } else {
+        listOf(mockStepMachine) + scannedDevices
+    }
 
     Column(
         modifier = modifier

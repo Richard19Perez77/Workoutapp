@@ -7,7 +7,7 @@ import java.util.UUID
 
 /**
  * In-memory stand-in for the BLE radio between phone (client) and machine (server).
- * Real BLE would deliver the same notification bytes via [BluetoothGattCallback].
+ * Real BLE would deliver the same notification bytes via [android.bluetooth.BluetoothGattCallback].
  */
 class MockBlePipe {
 
