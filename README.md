@@ -1,5 +1,9 @@
 # Workoutapp
 
+<p>
+<img src="docs/screenshot.png" width="220" alt="Workoutapp BLE connect screen" />
+</p>
+
 A learning-focused Android app that simulates a gym **step machine** workout.
 
 Today it covers:
